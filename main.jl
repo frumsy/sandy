@@ -10,6 +10,7 @@ const STONE = 1
 const SAND = 2
 # const WATER = 3
 
+selectedBlock = SAND
 windowWidth = 640
 windowHeight = 480
 leftPressed = false
@@ -41,6 +42,10 @@ font = sfFont_createFromFile(joinpath(dirname(pathof(CSFML)), "..", "examples", 
 
 event_ref = Ref{sfEvent}()
 
+selectedBlockText = sfText_create()
+sfText_setFont(selectedBlockText, font)
+sfText_setCharacterSize(selectedBlockText, 30)
+
 text = sfText_create()
 sfText_setFont(text, font)
 sfText_setCharacterSize(text, 30)
@@ -70,8 +75,10 @@ function updateClickedPixel()
     end
 
     # set boards voxel to new color
-    board[mousePos.y+1][mousePos.x+1] = newVoxel(SAND)
-    moveableMap[[mousePos.y + 1, mousePos.x + 1]] = SAND
+    board[mousePos.y+1][mousePos.x+1] = newVoxel(selectedBlock)
+    if (selectedBlock == SAND)
+        moveableMap[[mousePos.y + 1, mousePos.x + 1]] = SAND
+    end
 end
 
 function physicsTick(board)
@@ -87,6 +94,16 @@ function physicsTick(board)
             end
         end
     end
+end
+
+function handleKeys(event::sfEvent)
+    if (event.key.code == sfKeyNum1)
+        global selectedBlock = SAND
+    end
+    if (event.key.code == sfKeyNum2)
+        global selectedBlock = STONE
+    end
+    # event_ref.x.type == sfKeyNum3 && 
 end
 
 function mouseHandler(event::sfEvent)
@@ -138,10 +155,12 @@ while Bool(sfRenderWindow_isOpen(window))
             ty == sfEvtMouseMoved && println("Trigger sfEvtMouseMoved: $(unsafe_load(event_ptr.mouseMove).x), $(unsafe_load(event_ptr.mouseMove).y)")
         end
         event_ref.x.type == sfEvtClosed && sfRenderWindow_close(window)
+        handleKeys(event_ref.x)
         mouseHandler(event_ref.x)
     end
 
     sfText_setString(text, string("FPS:", floor(fps)))
+    sfText_setString(selectedBlockText, string("block:", selectedBlock))
 
     # clear the screen
     sfRenderWindow_clear(window, sfColor_fromRGBA(0, 0, 0, 1))
