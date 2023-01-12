@@ -17,6 +17,7 @@ leftPressed = false
 # TODO figure out how I want to handle resizing and map size in general
 
 board = [[newVoxel(AIR) for i in 0:windowWidth-1] for j in 0:windowHeight-1]
+moveableMap = Dict()
 
 function getBoardColors(board)
     flatBoard = collect(Iterators.flatten(board))
@@ -70,7 +71,22 @@ function updateClickedPixel()
 
     # set boards voxel to new color
     board[mousePos.y+1][mousePos.x+1] = newVoxel(SAND)
+    moveableMap[[mousePos.y + 1, mousePos.x + 1]] = SAND
+end
 
+function physicsTick(board)
+    # iterate over moveableMap and move particles down if air below them
+    for (i, j) in keys(moveableMap)
+        if i < windowHeight
+            down1 = board[i+1][j]
+            if down1.type == AIR
+                board[i+1][j] = board[i][j]
+                board[i][j] = down1
+                moveableMap[[i + 1, j]] = moveableMap[[i, j]]
+                delete!(moveableMap, [i, j])
+            end
+        end
+    end
 end
 
 function mouseHandler(event::sfEvent)
@@ -90,6 +106,7 @@ function mouseHandler(event::sfEvent)
     end
 end
 
+lastPhysicsTick = 0.0
 while Bool(sfRenderWindow_isOpen(window))
 
     currentTime = sfTime_asSeconds(sfClock_getElapsedTime(clock))
@@ -134,13 +151,21 @@ while Bool(sfRenderWindow_isOpen(window))
     # draw the sprite
     # newBoardSprite = updateBoard()
 
-    #update board
+    # make pysics happen
+
+    if (currentTime - lastPhysicsTick > 0.01)
+        global lastPhysicsTick = currentTime
+        physicsTick(board)
+    end
+
+    #draw board
     updateImageBuffer()
     texture = sfTexture_createFromImage(imageBuffer, C_NULL)
     @assert texture != C_NULL
 
     sfSprite_setTexture(sprite, texture, sfTrue)
     sfRenderWindow_drawSprite(window, sprite, C_NULL)
+
 
     sfRenderWindow_drawText(window, text, C_NULL)
     # update the window
