@@ -17,6 +17,7 @@ windowWidth = 640
 windowHeight = 480
 leftPressed = false
 prevPosition = nothing;
+cursorSize = 0
 
 # TODO figure out how I want to handle resizing and map size in general
 
@@ -86,13 +87,26 @@ function updateClickedPixel(prevPosition)
     function setPixel(point)
         x = point[1]
         y = point[2]
+        if x < 0 || x >= windowWidth || y < 0 || y >= windowHeight
+            return
+        end
         board[y+1][x+1] = newVoxel(selectedBlock)
         if (selectedBlock == SAND)
             moveableMap[[y + 1, x + 1]] = SAND
         end
     end
 
-    applyBetween([prevPosition.x, prevPosition.y], [mousePos.x, mousePos.y], setPixel)
+    function drawAt(point)
+        starts = point .- cursorSize
+        ends = point .+ cursorSize
+        for i in starts[1]:ends[1]
+            for j in starts[2]:ends[2]
+                setPixel([i, j])
+            end
+        end
+    end
+
+    applyBetween([prevPosition.x, prevPosition.y], [mousePos.x, mousePos.y], drawAt)
 
     global prevPosition = mousePos
 end
@@ -119,6 +133,17 @@ function handleKeys(event::sfEvent)
     end
     if (event.key.code == sfKeyNum2)
         global selectedBlock = STONE
+    end
+    if (event.key.code == sfKeyNum3)
+        global selectedBlock = AIR
+    end
+    if (event.key.code == sfKeyUp)
+        global cursorSize += 1
+        println("cursorSize:", cursorSize)
+    end
+    if (event.key.code == sfKeyDown)
+        global cursorSize -= 1
+        println("cursorSize:", cursorSize)
     end
     # event_ref.x.type == sfKeyNum3 && 
 end
