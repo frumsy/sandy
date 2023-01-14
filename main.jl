@@ -1,8 +1,10 @@
 using CSFML
 using CSFML.LibCSFML
 
+include("Utils.jl")
 include("Voxel.jl")
 using .Voxel: newVoxel
+using .Utils: applyBetween
 
 # enums of particle types, sand, stone, water, etc
 const AIR = 0
@@ -14,6 +16,7 @@ selectedBlock = SAND
 windowWidth = 640
 windowHeight = 480
 leftPressed = false
+prevPosition = nothing;
 
 # TODO figure out how I want to handle resizing and map size in general
 
@@ -68,17 +71,30 @@ function handleResize()
     return true
 end
 
-function updateClickedPixel()
+function updateClickedPixel(prevPosition)
     mousePos = sfMouse_getPositionRenderWindow(window)
     if mousePos.x < 0 || mousePos.x >= windowWidth || mousePos.y < 0 || mousePos.y >= windowHeight
         return
     end
 
-    # set boards voxel to new color
-    board[mousePos.y+1][mousePos.x+1] = newVoxel(selectedBlock)
-    if (selectedBlock == SAND)
-        moveableMap[[mousePos.y + 1, mousePos.x + 1]] = SAND
+    if prevPosition === nothing
+        global prevPosition = mousePos
+    else
+
     end
+
+    function setPixel(point)
+        x = point[1]
+        y = point[2]
+        board[y+1][x+1] = newVoxel(selectedBlock)
+        if (selectedBlock == SAND)
+            moveableMap[[y + 1, x + 1]] = SAND
+        end
+    end
+
+    applyBetween([prevPosition.x, prevPosition.y], [mousePos.x, mousePos.y], setPixel)
+
+    global prevPosition = mousePos
 end
 
 function physicsTick(board)
@@ -86,6 +102,7 @@ function physicsTick(board)
     for (i, j) in keys(moveableMap)
         if i < windowHeight
             down1 = board[i+1][j]
+            # TODO check against swappable blocks instead of air
             if down1.type == AIR
                 board[i+1][j] = board[i][j]
                 board[i][j] = down1
@@ -110,16 +127,17 @@ function mouseHandler(event::sfEvent)
     isLeft = sfMouseLeft == event.mouseButton.button
     # rightPress = sfMouseRight == event.mouseButton.button
     if event.type == sfEvtMouseButtonPressed && isLeft
-        updateClickedPixel()
+        updateClickedPixel(prevPosition)
         global leftPressed = true
     end
 
     if event.type == sfEvtMouseMoved && leftPressed
-        updateClickedPixel()
+        updateClickedPixel(prevPosition)
     end
 
     if event.type == sfEvtMouseButtonReleased && isLeft
         global leftPressed = false
+        global prevPosition = nothing
     end
 end
 
